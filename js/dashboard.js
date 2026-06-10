@@ -178,4 +178,32 @@ window.deleteTransaction = async function(id) {
     }
 }
 
+const btnLogout = document.getElementById('btn-logout');
+
+// Товч дээр дарах үед ажиллах Event Listener залгах
+btnLogout.addEventListener('click', async () => {
+    // Хэрэглэгчээс үнэхээр гарах эсэхийг нь лавлаж асууна
+    const confirmLogout = confirm("Та системээс гарахдаа итгэлтэй байна уу?");
+    
+    if (!confirmLogout) {
+        return; // Хэрэв цуцалбал гарах үйлдлийг зогсооно
+    }
+
+    try {
+        // Supabase-ийн системээс бүрмөсөн гаргах, сешн устгах тушаал
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+            throw error; // Хэрэв алдаа гарвал catch хэсэг рүү шиднэ
+        }
+
+        // Амжилттай гарсан тул нэвтрэх хуудас руу шууд шилжүүлнэ
+        window.location.href = 'index.html';
+
+    } catch (error) {
+        alert("Системээс гарахад алдаа гарлаа: " + error.message);
+        console.error("Logout алдаа:", error);
+    }
+});
+
 fetchTransactions();
