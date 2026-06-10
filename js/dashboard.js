@@ -46,52 +46,53 @@ transactionForm.addEventListener('submit', async (e) => {
     
     // Хэрэв хийж буй гүйлгээ нь ЗАРЛАГА бол ТӨСӨВ ХЭТЭРСЭН ЭСЭХИЙГ ШАЛГАНА
     if (type === 'expense') {
-        // Тухайн гүйлгээний огнооноос Жил-Сарыг салгаж авна (Жишээ нь: "2026-06-08" -> "2026-06")
         const currentMonthYear = date.substring(0, 7);
 
-        // Supabase-ээс энэ сард, энэ ангилалд тогтоосон төсөв байгаа эсэхийг хайх
-        const { data: budgetData } = await supabase
+        const { data: budgetData, error: budgetError } = await supabase
             .from('budgets')
             .select('limit_amount')
             .eq('user_id', user.id)
             .eq('category', category)
             .eq('month_year', currentMonthYear)
-            .maybeSingle(); // Олдвол ганцхан объект авна, олдохгүй бол null
+            .maybeSingle();
 
-        // Хэрэв энэ сард энэ ангилалд зориулсан төсөв олдвол цааш шалгана
+        if (budgetError) {
+            alert("Төсөв шалгахад алдаа гарлаа: " + budgetError.message);
+            return;
+        }
+
         if (budgetData) {
             const limitAmount = Number(budgetData.limit_amount);
 
-            // Энэ сард, энэ ангилалд урьд нь хийгдсэн бүх зарлагуудын нийлбэрийг Supabase-с татах
-            const { data: pastExpenses } = await supabase
+            const { data: pastExpenses, error: expenseError } = await supabase
                 .from('transactions')
                 .select('amount, date')
                 .eq('user_id', user.id)
                 .eq('type', 'expense')
-                .eq('category', category);
-            
-            // Энэ сард хамаарах зарлагуудыг шүүж нийлбэрийг олно
-            let totalPastExpense = 0;
-            if (pastExpenses) {
-                pastExpenses.forEach(tx => {
-                    // Гүйлгээ бүрийн огноо нь энэ сард хамааралтай эсэхийг шалгах
-                    if (tx.date && tx.date.substring(0, 7) === currentMonthYear) {
-                        totalPastExpense += Number(tx.amount);
-                    }
-                });
+                .eq('category', category)
+                .gte('date', `${currentMonthYear}-01`)
+                .lt('date', getNextMonth(currentMonthYear));
+
+            if (expenseError) {
+                alert("Зарлага шалгахад алдаа гарлаа: " + expenseError.message);
+                return;
             }
 
-            // Хуучин зарлагууд дэар ОДООНЫ ШИНЭ зарлагын дүнг нэмээд лимитээс давж байгааг шалгах
-            if (totalPastExpense + amount > limitAmount) {
-                const currentTotal = totalPastExpense + amount;
-                // Хэрэглэгчээс зөвшөөрөл авна
+            const totalPastExpense = (pastExpenses ?? []).reduce(
+                (total, tx) => total + Number(tx.amount),
+                0
+            );
+            const currentTotal = totalPastExpense + amount;
+
+            if (currentTotal > limitAmount) {
                 const proceed = confirm(
-                    `АНХААРУУЛГА!\n\nТаны ${currentMonthYear} сарын "${category}" ангиллын төсвийн хязгаар: ${limitAmount.toLocaleString()} ₮\nОдоогийн нийт зарцуулалт: ${currentTotal.toLocaleString()} ₮ болох гэж байна.\n\nТөсөв хэтрүүлж гүйлгээг үргэлжлүүлэх үү?`
+                    `Төсөв хэтэрнэ!\n\n` +
+                    `Төсөв: ${limitAmount.toLocaleString()} ₮\n` +
+                    `Шинэ нийт зарлага: ${currentTotal.toLocaleString()} ₮\n\n` +
+                    `Үргэлжлүүлэх үү?`
                 );
-                
-                if (!proceed) {
-                    return; // Хэрэв хэрэглэгч "Цуцлах" дээр дарвал гүйлгээг хадгалахгүй зогсооно!
-                }
+
+                if (!proceed) return;
             }
         }
     }
@@ -118,6 +119,17 @@ transactionForm.addEventListener('submit', async (e) => {
         await fetchTransactions();
     }
 });
+
+function getNextMonth(monthYear) {
+    const [year, month] = monthYear.split('-').map(Number);
+    const nextMonth = new Date(year, month, 1);
+
+    return [
+        nextMonth.getFullYear(),
+        String(nextMonth.getMonth() + 1).padStart(2, '0'),
+        '01'
+    ].join('-');
+}
 
 // --- ТӨСӨВ ТОГТООХ ФОРМЫН ЛОГИК ---
 const budgetForm = document.getElementById('budget-form');
