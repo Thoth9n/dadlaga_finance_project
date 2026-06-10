@@ -60,12 +60,12 @@ transactionForm.addEventListener('submit', async (e) => {
 
         // Хэрэв энэ сард энэ ангилалд зориулсан төсөв олдвол цааш шалгана
         if (budgetData) {
-            const limitAmount = budgetData.limit_amount;
+            const limitAmount = Number(budgetData.limit_amount);
 
             // Энэ сард, энэ ангилалд урьд нь хийгдсэн бүх зарлагуудын нийлбэрийг Supabase-с татах
             const { data: pastExpenses } = await supabase
                 .from('transactions')
-                .select('amount')
+                .select('amount, date')
                 .eq('user_id', user.id)
                 .eq('type', 'expense')
                 .eq('category', category);
@@ -76,7 +76,7 @@ transactionForm.addEventListener('submit', async (e) => {
                 pastExpenses.forEach(tx => {
                     // Гүйлгээ бүрийн огноо нь энэ сард хамааралтай эсэхийг шалгах
                     if (tx.date && tx.date.substring(0, 7) === currentMonthYear) {
-                        totalPastExpense += tx.amount;
+                        totalPastExpense += Number(tx.amount);
                     }
                 });
             }
@@ -95,7 +95,29 @@ transactionForm.addEventListener('submit', async (e) => {
             }
         }
     }
-}
+
+    const { error } = await supabase
+        .from('transactions')
+        .insert([
+            {
+                user_id: user.id,
+                type: type,
+                category: category,
+                amount: amount,
+                description: description,
+                date: date
+            }
+        ]);
+
+    if (error) {
+        alert("Гүйлгээг хадгалахад алдаа гарлаа: " + error.message);
+        console.error("Алдааны дэлгэрэнгүй:", error);
+    } else {
+        alert("Гүйлгээ амжилттай бүртгэгдлээ!");
+        transactionForm.reset();
+        await fetchTransactions();
+    }
+});
 
 // --- ТӨСӨВ ТОГТООХ ФОРМЫН ЛОГИК ---
 const budgetForm = document.getElementById('budget-form');
@@ -165,9 +187,9 @@ async function fetchTransactions() {
     // Ирсэн бүх гүйлгээнүүдийг нэг нэгээр нь шалгаж, орлого зарлагыг нэмнэ
     transactions.forEach(tx => {
         if (tx.type === 'income') {
-            totalIncome += tx.amount;  // Хэрэв орлого бол Нийт Орлого дээр нэмнэ
+            totalIncome += Number(tx.amount);  // Хэрэв орлого бол Нийт Орлого дээр нэмнэ
         } else if (tx.type === 'expense') {
-            totalExpense += tx.amount; // Хэрэв зарлага бол Нийт зарлага дээр нэмнэ
+            totalExpense += Number(tx.amount); // Хэрэв зарлага бол Нийт зарлага дээр нэмнэ
         }
     });
 
