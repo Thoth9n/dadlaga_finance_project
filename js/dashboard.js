@@ -50,10 +50,11 @@ transactionForm.addEventListener('submit', async (e) => {
 
         const { data: budgetRows, error: budgetError } = await supabase
             .from('budgets')
-            .select('limit_amount')
+            .select('id, limit_amount')
             .eq('user_id', user.id)
             .eq('category', category)
             .eq('month_year', currentMonthYear)
+            .order('id', { ascending: false })
             .limit(1);
 
         if (budgetError) {
@@ -176,7 +177,7 @@ budgetForm.addEventListener('submit', async (e) => {
         if (instance) instance.hide();
         
         // Доор бичих төсвийн жагсаалтыг шинэчлэх функцийг дуудна
-        if (typeof fetchBudgets === 'function') fetchBudgets();
+        await fetchBudgets();
     }
 });
 
@@ -359,13 +360,47 @@ async function fetchBudgets() {
                         <span class="text-muted mx-1">•</span>
                         <span class="small text-secondary">${b.month_year}</span>
                     </div>
-                    <span class="fw-bold text-primary small">${b.limit_amount.toLocaleString()} ₮</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-primary small">${Number(b.limit_amount).toLocaleString()} ₮</span>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            onclick="deleteBudget('${b.id}')"
+                            aria-label="Төсөв устгах"
+                        >
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
     });
 
     budgetsContainer.innerHTML = htmlContent;
+}
+
+window.deleteBudget = async function(id) {
+    const confirmDelete = confirm("Энэ төсвийг устгах уу?");
+    if (!confirmDelete) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        alert("Сешн дууссан байна.");
+        return;
+    }
+
+    const { error } = await supabase
+        .from('budgets')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+    if (error) {
+        alert("Төсөв устгахад алдаа гарлаа: " + error.message);
+        return;
+    }
+
+    await fetchBudgets();
 }
 
 fetchTransactions();
