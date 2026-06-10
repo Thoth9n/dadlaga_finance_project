@@ -8,6 +8,8 @@ const txDateInput = document.getElementById('tx-date');
 const txDescInput = document.getElementById('tx-desc');
 
 transactionForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
     const type = txTypeInput.value;
     const category = txCategoryInput.value;
     const amount = parseFloat(txAmountInput.value);
@@ -43,9 +45,8 @@ transactionForm.addEventListener('submit', async (e) => {
     } else {
         alert("Гүйлгээ амжилттай бүртгэгдлээ!");
         transactionForm.reset(); 
+        await fetchTransactions();
     }
-
-    fetchTransactions();
 })
 
 async function fetchTransactions() {
@@ -111,3 +112,5 @@ function renderTransactions(transactions) {
     // Бэлдсэн  HTML мөрүүдээ хүснэгтийн tbody руу шууд шахаж оруулна
     listContainer.innerHTML = htmlContent;
 }
+
+fetchTransactions();
