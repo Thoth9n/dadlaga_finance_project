@@ -64,6 +64,53 @@ transactionForm.addEventListener('submit', async (e) => {
     }
 })
 
+// --- ТӨСӨВ ТОГТООХ ФОРМЫН ЛОГИК ---
+const budgetForm = document.getElementById('budget-form');
+const budgetCategoryInput = document.getElementById('budget-category');
+const budgetAmountInput = document.getElementById('budget-amount');
+const budgetMonthInput = document.getElementById('budget-month');
+
+budgetForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Формоос өгөгдөл уншиж авах
+    const category = budgetCategoryInput.value;
+    const limitAmount = parseFloat(budgetAmountInput.value);
+    const monthYear = budgetMonthInput.value; 
+    // Нэвтэрсэн хэрэглэгчийг шалгах
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        alert("Сешн дууссан байна!");
+        return;
+    }
+
+    // Supabase-ийн 'budgets' хүснэгт рүү хадгалах
+    const { error } = await supabase
+        .from('budgets')
+        .insert([
+            {
+                user_id: user.id,
+                category: category,
+                limit_amount: limitAmount,
+                month_year: monthYear
+            }
+        ]);
+
+    if (error) {
+        alert("Төсөв тогтооход алдаа гарлаа: " + error.message);
+    } else {
+        alert(`${monthYear} сарын ${category} ангилалд төсөв амжилттай тогтоогдлоо!`);
+        budgetForm.reset();
+        
+        // Bootstrap Offcanvas цэсийг автоматаар хаах код
+        const instance = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasBudget'));
+        if (instance) instance.hide();
+        
+        // Доор бичих төсвийн жагсаалтыг шинэчлэх функцийг дуудна
+        if (typeof fetchBudgets === 'function') fetchBudgets();
+    }
+});
+
 async function fetchTransactions() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
