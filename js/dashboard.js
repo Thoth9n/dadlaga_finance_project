@@ -7,6 +7,21 @@ const txAmountInput = document.getElementById('tx-amount');
 const txDateInput = document.getElementById('tx-date');
 const txDescInput = document.getElementById('tx-desc');
 
+document.addEventListener('DOMContentLoaded', async () => {
+    
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    document.getElementById('user-email').textContent = user.email;
+
+    await fetchTransactions(); 
+    if (typeof fetchBudgets === 'function') fetchBudgets();
+});
+
 transactionForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
