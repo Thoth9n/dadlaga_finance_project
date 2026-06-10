@@ -79,6 +79,26 @@ async function fetchTransactions() {
         return;
     }
 
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    // Ирсэн бүх гүйлгээнүүдийг нэг нэгээр нь шалгаж, орлого зарлагыг нэмнэ
+    transactions.forEach(tx => {
+        if (tx.type === 'income') {
+            totalIncome += tx.amount;  // Хэрэв орлого бол Нийт Орлого дээр нэмнэ
+        } else if (tx.type === 'expense') {
+            totalExpense += tx.amount; // Хэрэв зарлага бол Нийт зарлага дээр нэмнэ
+        }
+    });
+
+    // Үлдэгдэл баланс = Нийт Орлого - Нийт Зарлага
+    const totalBalance = totalIncome - totalExpense;
+
+    // Бодсон дүнг HTML карт руу бичих
+    document.getElementById('total-balance').textContent = `${totalBalance.toLocaleString()} ₮`;
+    document.getElementById('total-income').textContent = `${totalIncome.toLocaleString()} ₮`;
+    document.getElementById('total-expense').textContent = `${totalExpense.toLocaleString()} ₮`;
+
     renderTransactions(transactions);
 }
 
