@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('user-email').textContent = user.email;
 
     await fetchTransactions(); 
+    await fetchBudgets();
     if (typeof fetchBudgets === 'function') fetchBudgets();
 });
 
