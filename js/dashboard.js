@@ -253,4 +253,50 @@ btnLogout.addEventListener('click', async () => {
     }
 });
 
+// Хэрэглэгчийн тогтоосон төсвүүдийг уншиж, Offcanvas доор жагсаах функц
+async function fetchBudgets() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: budgets, error } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('month_year', { ascending: false });
+
+    if (error) {
+        console.error("Төсөв уншихад алдаа гарлаа:", error.message);
+        return;
+    }
+
+    const budgetsContainer = document.getElementById('current-budgets-list');
+    
+    if (!budgets || budgets.length === 0) {
+        budgetsContainer.innerHTML = `
+            <h6 class="fw-bold text-dark mb-3">Одоогийн тогтоосон төсвүүд:</h6>
+            <div class="text-center py-3 text-muted small bg-light rounded">Одоогоор төсөв тогтоогоогүй байна.</div>
+        `;
+        return;
+    }
+
+    let htmlContent = `<h6 class="fw-bold text-dark mb-3">Одоогийн тогтоосон төсвүүд:</h6>`;
+    
+    budgets.forEach(b => {
+        htmlContent += `
+            <div class="card p-2 mb-2 bg-light border-0 shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-bold small text-dark">${b.category}</span>
+                        <span class="text-muted mx-1">•</span>
+                        <span class="small text-secondary">${b.month_year}</span>
+                    </div>
+                    <span class="fw-bold text-primary small">${b.limit_amount.toLocaleString()} ₮</span>
+                </div>
+            </div>
+        `;
+    });
+
+    budgetsContainer.innerHTML = htmlContent;
+}
+
 fetchTransactions();
