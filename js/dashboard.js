@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await fetchTransactions(); 
     await fetchBudgets();
-    if (typeof fetchBudgets === 'function') fetchBudgets();
 });
 
 transactionForm.addEventListener('submit', async (e) => {
