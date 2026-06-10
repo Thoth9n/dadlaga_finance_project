@@ -128,4 +128,34 @@ function renderTransactions(transactions) {
     listContainer.innerHTML = htmlContent;
 }
 
+window.deleteTransaction = async function(id) {
+    // Хэрэглэгчээс үнэхээр устгах эсэхийг нь лавлаж асууна
+    const confirmDelete = confirm("Та энэ гүйлгээг устгахдаа итгэлтэй байна уу?");
+    
+    if (!confirmDelete) {
+        return; // Хэрэв "Үгүй" гэвэл устгах үйлдлийг цуцалж, функцээс гарна
+    }
+
+    try {
+        // Supabase өгөгдлийн сангаас тухайн ID-тай гүйлгээг устгах
+        const { error } = await supabase
+            .from('transactions')
+            .delete() // SQL-ийн DELETE команд
+            .eq('id', id); // Зөвхөн энэ ID-тай мөрийг устга гэдэг шүүлтүүр
+
+        if (error) {
+            throw error; // Хэрэв алдаа гарвал catch хэсэг рүү шиднэ
+        }
+
+        alert("Гүйлгээ амжилттай устгагдлаа.");
+
+        // Устгасны дараа дэлгэц дээрх хүснэгтийг шууд шинэчилж харуулна
+        fetchTransactions();
+
+    } catch (error) {
+        alert("Гүйлгээ устгахад алдаа гарлаа: " + error.message);
+        console.error("Устгах үеийн алдаа:", error);
+    }
+}
+
 fetchTransactions();
