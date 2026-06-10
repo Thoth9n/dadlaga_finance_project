@@ -23,46 +23,79 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 transactionForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Хуудас Refresh хийгдэхийг зогсооно
 
+    // Талбаруудаас хэрэглэгчийн оруулсан утгуудыг уншиж авах
     const type = txTypeInput.value;
     const category = txCategoryInput.value;
-    const amount = parseFloat(txAmountInput.value);
+    const amount = parseFloat(txAmountInput.value); // Текстийг тоо болгож хөрвүүлнэ
     const date = txDateInput.value;
     const description = txDescInput.value;
 
+    // Гүйлгээ нэмэх гэж буй нэвтэрсэн хэрэглэгчийн мэдээллийг Supabase-ээс авах
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    console.log(user)
+    // console.log(user)
 
     if (userError || !user) {
-        alert("Сешн дууссан байна. Дахин нэвтрэнэ үү!");
+        alert("Сешн дууссан байна. Дахин нэвтэрнэ үү!");
         window.location.href = 'index.html';
         return;
     }
 
-    const { data, error } = await supabase
-        .from('transactions')
-        .insert([
-            {
-                user_id: user.id,
-                type: type,
-                category: category,
-                amount: amount,
-                description: description,
-                date: date
-            }
-        ])
-        .select();
+// --- (Формын утгуудыг авсны дараа, Insert хийхийн өмнөх хэсэг) ---
+    
+    // Хэрэв хийж буй гүйлгээ нь ЗАРЛАГА бол ТӨСӨВ ХЭТЭРСЭН ЭСЭХИЙГ ШАЛГАНА
+    if (type === 'expense') {
+        // Тухайн гүйлгээний огнооноос Жил-Сарыг салгаж авна (Жишээ нь: "2026-06-08" -> "2026-06")
+        const currentMonthYear = date.substring(0, 7);
 
-    if (error) {
-        alert("Гүйлгээг хадгалахад алдаа гарлаа: " + error.message);
-        console.error("Алдааны дэлгэрэнгүй:", error);
-    } else {
-        alert("Гүйлгээ амжилттай бүртгэгдлээ!");
-        transactionForm.reset(); 
-        await fetchTransactions();
+        // Supabase-ээс энэ сард, энэ ангилалд тогтоосон төсөв байгаа эсэхийг хайх
+        const { data: budgetData } = await supabase
+            .from('budgets')
+            .select('limit_amount')
+            .eq('user_id', user.id)
+            .eq('category', category)
+            .eq('month_year', currentMonthYear)
+            .maybeSingle(); // Олдвол ганцхан объект авна, олдохгүй бол null
+
+        // Хэрэв энэ сард энэ ангилалд зориулсан төсөв олдвол цааш шалгана
+        if (budgetData) {
+            const limitAmount = budgetData.limit_amount;
+
+            // Энэ сард, энэ ангилалд урьд нь хийгдсэн бүх зарлагуудын нийлбэрийг Supabase-с татах
+            const { data: pastExpenses } = await supabase
+                .from('transactions')
+                .select('amount')
+                .eq('user_id', user.id)
+                .eq('type', 'expense')
+                .eq('category', category);
+            
+            // Энэ сард хамаарах зарлагуудыг шүүж нийлбэрийг олно
+            let totalPastExpense = 0;
+            if (pastExpenses) {
+                pastExpenses.forEach(tx => {
+                    // Гүйлгээ бүрийн огноо нь энэ сард хамааралтай эсэхийг шалгах
+                    if (tx.date && tx.date.substring(0, 7) === currentMonthYear) {
+                        totalPastExpense += tx.amount;
+                    }
+                });
+            }
+
+            // Хуучин зарлагууд дэар ОДООНЫ ШИНЭ зарлагын дүнг нэмээд лимитээс давж байгааг шалгах
+            if (totalPastExpense + amount > limitAmount) {
+                const currentTotal = totalPastExpense + amount;
+                // Хэрэглэгчээс зөвшөөрөл авна
+                const proceed = confirm(
+                    `АНХААРУУЛГА!\n\nТаны ${currentMonthYear} сарын "${category}" ангиллын төсвийн хязгаар: ${limitAmount.toLocaleString()} ₮\nОдоогийн нийт зарцуулалт: ${currentTotal.toLocaleString()} ₮ болох гэж байна.\n\nТөсөв хэтрүүлж гүйлгээг үргэлжлүүлэх үү?`
+                );
+                
+                if (!proceed) {
+                    return; // Хэрэв хэрэглэгч "Цуцлах" дээр дарвал гүйлгээг хадгалахгүй зогсооно!
+                }
+            }
+        }
     }
-})
+}
 
 // --- ТӨСӨВ ТОГТООХ ФОРМЫН ЛОГИК ---
 const budgetForm = document.getElementById('budget-form');
