@@ -48,18 +48,20 @@ transactionForm.addEventListener('submit', async (e) => {
     if (type === 'expense') {
         const currentMonthYear = date.substring(0, 7);
 
-        const { data: budgetData, error: budgetError } = await supabase
+        const { data: budgetRows, error: budgetError } = await supabase
             .from('budgets')
             .select('limit_amount')
             .eq('user_id', user.id)
             .eq('category', category)
             .eq('month_year', currentMonthYear)
-            .maybeSingle();
+            .limit(1);
 
         if (budgetError) {
             alert("Төсөв шалгахад алдаа гарлаа: " + budgetError.message);
             return;
         }
+
+        const budgetData = budgetRows?.[0];
 
         if (budgetData) {
             const limitAmount = Number(budgetData.limit_amount);
