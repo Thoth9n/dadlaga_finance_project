@@ -62,6 +62,30 @@
   font-weight: 900;
 }
 
+.profile-badge-icon svg,
+.active-badge-icon svg,
+.achievement-icon svg {
+  width: 65%;
+  height: 65%;
+  overflow: visible;
+  fill: color-mix(in srgb, currentColor, transparent 86%);
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.active-badge-icon svg {
+  width: 68%;
+  height: 68%;
+}
+
+.achievement-icon svg {
+  width: 70%;
+  height: 70%;
+  filter: drop-shadow(0 2px 2px color-mix(in srgb, currentColor, transparent 72%));
+}
+
 .badge-offcanvas {
   width: min(430px, 100%) !important;
   background: #f8faff;

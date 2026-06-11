@@ -12,11 +12,76 @@ let currentUser = null;
 let latestTransactions = [];
 let latestBudgets = [];
 
+const badgeIcons = {
+    sprout: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 51V29" />
+            <path d="M31 31C20 31 13 24 13 13c11 0 18 7 18 18Z" />
+            <path d="M33 26C34 16 42 10 52 11c-1 10-8 16-19 15Z" />
+            <path d="M22 52h20" />
+        </svg>
+    `,
+    shield: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 8 51 15v14c0 13-8 22-19 28C21 51 13 42 13 29V15l19-7Z" />
+            <path d="m23 31 6 6 13-14" />
+        </svg>
+    `,
+    ledger: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M16 10h29a5 5 0 0 1 5 5v39H20a6 6 0 0 1-6-6V12a2 2 0 0 1 2-2Z" />
+            <path d="M20 10v44M27 22h15M27 31h15M27 40h10" />
+        </svg>
+    `,
+    gem: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="m13 23 9-12h20l9 12-19 31L13 23Z" />
+            <path d="m13 23 19 8 19-8M22 11l10 20 10-20M32 31v23" />
+        </svg>
+    `,
+    growth: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M12 49h40" />
+            <path d="m16 42 11-12 8 7 14-18" />
+            <path d="M39 19h10v10" />
+        </svg>
+    `,
+    bastion: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="m32 7 22 13v24L32 57 10 44V20L32 7Z" />
+            <path d="m32 17 12 7v15l-12 7-12-7V24l12-7Z" />
+            <path d="M32 17v29M20 24l24 15M44 24 20 39" />
+        </svg>
+    `,
+    star: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="m32 7 7 17 18 2-14 12 4 18-15-9-15 9 4-18L7 26l18-2 7-17Z" />
+            <circle cx="32" cy="32" r="7" />
+        </svg>
+    `,
+    coin: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="24" />
+            <circle cx="32" cy="32" r="17" />
+            <path d="M38 22h-9a6 6 0 0 0 0 12h6a6 6 0 0 1 0 12H25M32 17v30" />
+        </svg>
+    `,
+    crown: `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="m10 19 13 10 9-18 9 18 13-10-5 27H15l-5-27Z" />
+            <path d="M16 52h32M20 39h24" />
+            <circle cx="10" cy="18" r="3" />
+            <circle cx="32" cy="9" r="3" />
+            <circle cx="54" cy="18" r="3" />
+        </svg>
+    `
+};
+
 const badgeDefinitions = [
     {
         id: 'balance-100k',
         name: 'Өсөлтийн үр',
-        icon: '🌱',
+        icon: 'sprout',
         rarity: 'Common',
         rarityClass: 'common',
         rule: 'Цэвэр үлдэгдлээ 100,000 ₮-д хүргэх',
@@ -27,7 +92,7 @@ const badgeDefinitions = [
     {
         id: 'budget-3',
         name: 'Төсвийн хамгаалагч',
-        icon: '🛡',
+        icon: 'shield',
         rarity: 'Uncommon',
         rarityClass: 'uncommon',
         rule: 'Дууссан 3 сар дараалан бүх төсвийн хязгаарт багтах',
@@ -38,7 +103,7 @@ const badgeDefinitions = [
     {
         id: 'transactions-10',
         name: 'Эхлэл',
-        icon: '✎',
+        icon: 'ledger',
         rarity: 'Common',
         rarityClass: 'common',
         rule: 'Орлого, зарлагын нийт 10 гүйлгээг бүртгэх',
@@ -49,7 +114,7 @@ const badgeDefinitions = [
     {
         id: 'saving-20',
         name: 'Хуримтлуулагч',
-        icon: '💎',
+        icon: 'gem',
         rarity: 'Rare',
         rarityClass: 'rare',
         rule: 'Нийт орлогын 20%-иас дээшийг үлдэгдэл болгох',
@@ -60,7 +125,7 @@ const badgeDefinitions = [
     {
         id: 'positive-months-3',
         name: 'Эерэг урсгал',
-        icon: '↗',
+        icon: 'growth',
         rarity: 'Epic',
         rarityClass: 'epic',
         rule: 'Дууссан 3 сар дараалан орлогоо зарлагаасаа өндөр байлгах',
@@ -71,7 +136,7 @@ const badgeDefinitions = [
     {
         id: 'balance-500k',
         name: 'Нөөцийн бамбай',
-        icon: '⬢',
+        icon: 'bastion',
         rarity: 'Epic',
         rarityClass: 'epic',
         rule: 'Цэвэр үлдэгдлээ 500,000 ₮-д хүргэх',
@@ -82,7 +147,7 @@ const badgeDefinitions = [
     {
         id: 'budget-6',
         name: 'Төсвийн эзэн',
-        icon: '✦',
+        icon: 'star',
         rarity: 'Legendary',
         rarityClass: 'legendary',
         rule: 'Дууссан 6 сар тасралтгүй нэг ч төсөв хэтрүүлэхгүй байх',
@@ -93,7 +158,7 @@ const badgeDefinitions = [
     {
         id: 'saving-40',
         name: 'Алтан хуримтлал',
-        icon: '◉',
+        icon: 'coin',
         rarity: 'Legendary',
         rarityClass: 'legendary',
         rule: 'Нийт орлогын 40%-иас дээшийг цэвэр үлдэгдэл болгох',
@@ -104,7 +169,7 @@ const badgeDefinitions = [
     {
         id: 'balance-1m',
         name: 'Саяын титэм',
-        icon: '♛',
+        icon: 'crown',
         rarity: 'Mythic',
         rarityClass: 'mythic',
         rule: 'Цэвэр үлдэгдлээ 1,000,000 ₮-д хүргэх',
@@ -677,7 +742,7 @@ function renderBadges() {
                 style="--badge-color:${theme.color};--badge-bg:${theme.background}"
             >
                 <span class="achievement-medal">
-                    <span class="achievement-icon">${badge.icon}</span>
+                    <span class="achievement-icon">${badgeIcons[badge.icon]}</span>
                 </span>
                 <div class="achievement-copy">
                     <div class="achievement-heading">
@@ -710,15 +775,15 @@ function renderBadges() {
 }
 
 function updateSelectedBadge(badge) {
-    const icon = badge?.icon ?? '★';
+    const icon = badge ? badgeIcons[badge.icon] : badgeIcons.star;
     const name = badge?.name ?? 'Миний badge';
     const rarityClass = badge?.rarityClass ?? 'common';
     const badgeButton = document.getElementById('selected-badge-button');
     const activePreview = document.getElementById('active-badge-preview');
 
-    document.getElementById('selected-badge-icon').textContent = icon;
+    document.getElementById('selected-badge-icon').innerHTML = icon;
     document.getElementById('selected-badge-name').textContent = name;
-    document.getElementById('active-badge-icon').textContent = icon;
+    document.getElementById('active-badge-icon').innerHTML = icon;
     document.getElementById('active-badge-name').textContent = badge?.name ?? 'Badge сонгоогүй';
 
     [badgeButton, activePreview].forEach(element => {
