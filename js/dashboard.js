@@ -6,6 +6,122 @@ const txCategoryInput = document.getElementById('tx-category');
 const txAmountInput = document.getElementById('tx-amount');
 const txDateInput = document.getElementById('tx-date');
 const txDescInput = document.getElementById('tx-desc');
+const badgeList = document.getElementById('badge-list');
+
+let currentUser = null;
+let latestTransactions = [];
+let latestBudgets = [];
+
+const badgeDefinitions = [
+    {
+        id: 'balance-100k',
+        name: 'Өсөлтийн үр',
+        icon: '🌱',
+        rarity: 'Common',
+        rarityClass: 'common',
+        rule: 'Цэвэр үлдэгдлээ 100,000 ₮-д хүргэх',
+        progress: stats => `${Math.min(stats.balance, 100000).toLocaleString()} / 100,000 ₮`,
+        progressPercent: stats => stats.balance / 100000 * 100,
+        isEarned: stats => stats.balance >= 100000
+    },
+    {
+        id: 'budget-3',
+        name: 'Төсвийн хамгаалагч',
+        icon: '🛡',
+        rarity: 'Uncommon',
+        rarityClass: 'uncommon',
+        rule: 'Дууссан 3 сар дараалан бүх төсвийн хязгаарт багтах',
+        progress: stats => `${Math.min(stats.budgetStreak, 3)} / 3 сар`,
+        progressPercent: stats => stats.budgetStreak / 3 * 100,
+        isEarned: stats => stats.budgetStreak >= 3
+    },
+    {
+        id: 'transactions-10',
+        name: 'Эхлэл',
+        icon: '✎',
+        rarity: 'Common',
+        rarityClass: 'common',
+        rule: 'Орлого, зарлагын нийт 10 гүйлгээг бүртгэх',
+        progress: stats => `${Math.min(stats.transactionCount, 10)} / 10 гүйлгээ`,
+        progressPercent: stats => stats.transactionCount / 10 * 100,
+        isEarned: stats => stats.transactionCount >= 10
+    },
+    {
+        id: 'saving-20',
+        name: 'Хуримтлуулагч',
+        icon: '💎',
+        rarity: 'Rare',
+        rarityClass: 'rare',
+        rule: 'Нийт орлогын 20%-иас дээшийг үлдэгдэл болгох',
+        progress: stats => `${Math.min(stats.savingRate, 20).toFixed(0)} / 20%`,
+        progressPercent: stats => stats.savingRate / 20 * 100,
+        isEarned: stats => stats.savingRate >= 20
+    },
+    {
+        id: 'positive-months-3',
+        name: 'Эерэг урсгал',
+        icon: '↗',
+        rarity: 'Epic',
+        rarityClass: 'epic',
+        rule: 'Дууссан 3 сар дараалан орлогоо зарлагаасаа өндөр байлгах',
+        progress: stats => `${Math.min(stats.positiveMonthStreak, 3)} / 3 сар`,
+        progressPercent: stats => stats.positiveMonthStreak / 3 * 100,
+        isEarned: stats => stats.positiveMonthStreak >= 3
+    },
+    {
+        id: 'balance-500k',
+        name: 'Нөөцийн бамбай',
+        icon: '⬢',
+        rarity: 'Epic',
+        rarityClass: 'epic',
+        rule: 'Цэвэр үлдэгдлээ 500,000 ₮-д хүргэх',
+        progress: stats => `${Math.min(stats.balance, 500000).toLocaleString()} / 500,000 ₮`,
+        progressPercent: stats => stats.balance / 500000 * 100,
+        isEarned: stats => stats.balance >= 500000
+    },
+    {
+        id: 'budget-6',
+        name: 'Төсвийн эзэн',
+        icon: '✦',
+        rarity: 'Legendary',
+        rarityClass: 'legendary',
+        rule: 'Дууссан 6 сар тасралтгүй нэг ч төсөв хэтрүүлэхгүй байх',
+        progress: stats => `${Math.min(stats.budgetStreak, 6)} / 6 сар`,
+        progressPercent: stats => stats.budgetStreak / 6 * 100,
+        isEarned: stats => stats.budgetStreak >= 6
+    },
+    {
+        id: 'saving-40',
+        name: 'Алтан хуримтлал',
+        icon: '◉',
+        rarity: 'Legendary',
+        rarityClass: 'legendary',
+        rule: 'Нийт орлогын 40%-иас дээшийг цэвэр үлдэгдэл болгох',
+        progress: stats => `${Math.min(stats.savingRate, 40).toFixed(0)} / 40%`,
+        progressPercent: stats => stats.savingRate / 40 * 100,
+        isEarned: stats => stats.savingRate >= 40
+    },
+    {
+        id: 'balance-1m',
+        name: 'Саяын титэм',
+        icon: '♛',
+        rarity: 'Mythic',
+        rarityClass: 'mythic',
+        rule: 'Цэвэр үлдэгдлээ 1,000,000 ₮-д хүргэх',
+        progress: stats => `${Math.min(stats.balance, 1000000).toLocaleString()} / 1,000,000 ₮`,
+        progressPercent: stats => stats.balance / 1000000 * 100,
+        isEarned: stats => stats.balance >= 1000000
+    }
+];
+
+const rarityThemes = {
+    common: { color: '#64748b', background: '#e2e8f0' },
+    uncommon: { color: '#16a34a', background: '#dcfce7' },
+    rare: { color: '#2563eb', background: '#dbeafe' },
+    epic: { color: '#9333ea', background: '#f3e8ff' },
+    legendary: { color: '#f59e0b', background: '#fef3c7' },
+    mythic: { color: '#d946ef', background: '#fae8ff' }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     
@@ -16,10 +132,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    currentUser = user;
     document.getElementById('user-email').textContent = user.email;
 
     await fetchTransactions(); 
     await fetchBudgets();
+    renderBadges();
 });
 
 transactionForm.addEventListener('submit', async (e) => {
@@ -216,7 +334,9 @@ async function fetchTransactions() {
     document.getElementById('total-income').textContent = `${totalIncome.toLocaleString()} ₮`;
     document.getElementById('total-expense').textContent = `${totalExpense.toLocaleString()} ₮`;
 
+    latestTransactions = transactions;
     renderTransactions(transactions);
+    renderBadges();
 }
 
 function renderTransactions(transactions) {
@@ -339,6 +459,9 @@ async function fetchBudgets() {
         return;
     }
 
+    latestBudgets = budgets ?? [];
+    renderBadges();
+
     const budgetsContainer = document.getElementById('current-budgets-list');
     
     if (!budgets || budgets.length === 0) {
@@ -402,5 +525,216 @@ window.deleteBudget = async function(id) {
 
     await fetchBudgets();
 }
+
+function getBadgeStats() {
+    const income = latestTransactions
+        .filter(tx => tx.type === 'income')
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const expense = latestTransactions
+        .filter(tx => tx.type === 'expense')
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const balance = income - expense;
+    const savingRate = income > 0 ? Math.max(0, (balance / income) * 100) : 0;
+
+    return {
+        balance,
+        savingRate,
+        budgetStreak: calculateBudgetStreak(),
+        transactionCount: latestTransactions.length,
+        positiveMonthStreak: calculatePositiveMonthStreak()
+    };
+}
+
+function calculatePositiveMonthStreak() {
+    const monthlyTotals = new Map();
+
+    latestTransactions.forEach(tx => {
+        const month = String(tx.date).substring(0, 7);
+        if (!month) return;
+
+        const totals = monthlyTotals.get(month) ?? { income: 0, expense: 0 };
+        totals[tx.type] += Number(tx.amount);
+        monthlyTotals.set(month, totals);
+    });
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const months = [...monthlyTotals.keys()]
+        .filter(month => month < currentMonth)
+        .sort()
+        .reverse();
+    let streak = 0;
+    let cursor = null;
+
+    for (const month of months) {
+        if (cursor && month !== getPreviousMonth(cursor)) break;
+
+        const totals = monthlyTotals.get(month);
+        if (totals.income <= totals.expense) break;
+
+        streak++;
+        cursor = month;
+    }
+
+    return streak;
+}
+
+function calculateBudgetStreak() {
+    const budgetsByMonth = new Map();
+
+    latestBudgets.forEach(budget => {
+        if (!budgetsByMonth.has(budget.month_year)) {
+            budgetsByMonth.set(budget.month_year, []);
+        }
+        budgetsByMonth.get(budget.month_year).push(budget);
+    });
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const months = [...budgetsByMonth.keys()]
+        .filter(month => month < currentMonth)
+        .sort()
+        .reverse();
+    let streak = 0;
+    let cursor = null;
+
+    for (const month of months) {
+        if (cursor && month !== getPreviousMonth(cursor)) break;
+
+        const stayedWithinBudget = budgetsByMonth.get(month).every(budget => {
+                const spent = latestTransactions
+                    .filter(tx =>
+                        tx.type === 'expense' &&
+                        tx.category === budget.category &&
+                        String(tx.date).startsWith(month)
+                    )
+                    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+                return spent <= Number(budget.limit_amount);
+            });
+
+        if (!stayedWithinBudget) break;
+        streak++;
+        cursor = month;
+    }
+
+    return streak;
+}
+
+function getPreviousMonth(monthYear) {
+    const [year, month] = monthYear.split('-').map(Number);
+    const previous = new Date(year, month - 2, 1);
+    return `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getSelectedBadgeId() {
+    if (!currentUser) return null;
+    return localStorage.getItem(`selected-badge:${currentUser.id}`);
+}
+
+function saveSelectedBadge(id) {
+    if (!currentUser) return;
+    localStorage.setItem(`selected-badge:${currentUser.id}`, id);
+}
+
+function renderBadges() {
+    if (!badgeList || !currentUser) return;
+
+    const stats = getBadgeStats();
+    const earnedBadges = badgeDefinitions.filter(badge => badge.isEarned(stats));
+    let selectedId = getSelectedBadgeId();
+
+    if (!earnedBadges.some(badge => badge.id === selectedId)) {
+        selectedId = earnedBadges[0]?.id ?? null;
+        if (selectedId) saveSelectedBadge(selectedId);
+    }
+
+    const selectedBadge = badgeDefinitions.find(badge => badge.id === selectedId);
+    updateSelectedBadge(selectedBadge);
+
+    const rarityOrder = {
+        common: 1,
+        uncommon: 2,
+        rare: 3,
+        epic: 4,
+        legendary: 5,
+        mythic: 6
+    };
+    const sortedBadges = [...badgeDefinitions].sort(
+        (a, b) => rarityOrder[a.rarityClass] - rarityOrder[b.rarityClass]
+    );
+
+    badgeList.innerHTML = sortedBadges.map(badge => {
+        const earned = badge.isEarned(stats);
+        const selected = badge.id === selectedId;
+        const theme = rarityThemes[badge.rarityClass];
+        const progressPercent = Math.max(
+            0,
+            Math.min(100, badge.progressPercent(stats))
+        );
+
+        return `
+            <div
+                class="achievement-badge rarity-${badge.rarityClass} ${earned ? '' : 'is-locked'} ${selected ? 'is-selected' : ''}"
+                style="--badge-color:${theme.color};--badge-bg:${theme.background}"
+            >
+                <span class="achievement-medal">
+                    <span class="achievement-icon">${badge.icon}</span>
+                </span>
+                <div class="achievement-copy">
+                    <div class="achievement-heading">
+                        <div class="achievement-name">${badge.name}</div>
+                        <span class="achievement-rarity">${badge.rarity}</span>
+                    </div>
+                    <div class="achievement-rule">${badge.rule}</div>
+                    <div class="achievement-progress">
+                        <span>${earned ? 'Амжилт нээгдсэн' : badge.progress(stats)}</span>
+                        <span>${Math.round(progressPercent)}%</span>
+                    </div>
+                    <div class="achievement-progress-track" aria-hidden="true">
+                        <span
+                            class="achievement-progress-fill"
+                            style="width:${progressPercent}%"
+                        ></span>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    class="achievement-select"
+                    data-badge-id="${badge.id}"
+                    ${earned ? '' : 'disabled'}
+                >
+                    ${selected ? 'Сонгосон' : earned ? 'Сонгох' : 'Түгжээтэй'}
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateSelectedBadge(badge) {
+    const icon = badge?.icon ?? '★';
+    const name = badge?.name ?? 'Миний badge';
+    const rarityClass = badge?.rarityClass ?? 'common';
+    const badgeButton = document.getElementById('selected-badge-button');
+    const activePreview = document.getElementById('active-badge-preview');
+
+    document.getElementById('selected-badge-icon').textContent = icon;
+    document.getElementById('selected-badge-name').textContent = name;
+    document.getElementById('active-badge-icon').textContent = icon;
+    document.getElementById('active-badge-name').textContent = badge?.name ?? 'Badge сонгоогүй';
+
+    [badgeButton, activePreview].forEach(element => {
+        element.className = element.className
+            .replace(/\brarity-\S+/g, '')
+            .trim();
+        element.classList.add(`rarity-${rarityClass}`);
+    });
+}
+
+badgeList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-badge-id]');
+    if (!button || button.disabled) return;
+
+    saveSelectedBadge(button.dataset.badgeId);
+    renderBadges();
+});
 
 fetchTransactions();
